@@ -18,9 +18,9 @@ import os
 from dataclasses import dataclass, field
 from collections import deque, Counter
 from typing import Optional, List, Deque
-from config import Config
-from app_logging import get_logger
-from sibi_core import (
+from src.config import Config
+from src.app_logging import get_logger
+from src.sibi_core import (
     center_keypoints,
     extract_keypoint_features,
     normalize_keypoints,
@@ -268,6 +268,10 @@ class PredictionManager:
             if label in candidates:
                 return label
         return self._pending_predictions[-1]
+
+    def has_pending_prediction(self, prediction: str) -> bool:
+        """Return True when a label is present in the current smoothing window."""
+        return prediction in self._pending_predictions
     def commit_pending_if_ready(self) -> Optional[str]:
         """Commit a character from pending samples when the hold completes."""
         if not self._pending_predictions or not self.can_predict():
@@ -671,7 +675,9 @@ class SignLanguageRecognizer:
             return
 
         if self.state.pending_motion_letter is None:
-            self.state.pending_motion_letter = self.motion_detector.detect(self.state.index_tip_track)
+            detected_motion = self.motion_detector.detect(self.state.index_tip_track)
+            if detected_motion and self.prediction_manager.has_pending_prediction(detected_motion):
+                self.state.pending_motion_letter = detected_motion
 
         motion_letter = self.state.pending_motion_letter
         if motion_letter is not None:
@@ -814,17 +820,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-

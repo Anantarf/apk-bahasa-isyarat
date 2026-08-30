@@ -3,7 +3,7 @@ from typing import Optional
 
 import numpy as np
 
-from config import Config
+from src.config import Config
 
 
 def select_target_hand_index(results, cfg: Config) -> Optional[int]:

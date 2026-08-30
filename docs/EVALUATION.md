@@ -1,6 +1,6 @@
 # Evaluasi Model (Precision, Recall, F1)
 
-Dokumen ini menjelaskan cara menjalankan evaluasi dan cara membaca output dari `evaluasi.py`.
+Dokumen ini menjelaskan cara menjalankan evaluasi dan cara membaca output dari `scripts/evaluasi.py`.
 
 ## Yang Dievaluasi
 
@@ -14,21 +14,21 @@ Dokumen ini menjelaskan cara menjalankan evaluasi dan cara membaca output dari `
 Gunakan python dari venv project:
 
 ```powershell
-& .\library\Scripts\python.exe .\evaluasi.py --cv 5 --seed 42 --no-in-sample
+& .\library\Scripts\python.exe .\scripts\evaluasi.py --cv 5 --seed 42 --no-in-sample
 ```
 
 Quality gate sebelum retrain (strict):
 
 ```powershell
-& .\library\Scripts\python.exe .\evaluasi.py --validate-only --strict
+& .\library\Scripts\python.exe .\scripts\evaluasi.py --validate-only --strict
 ```
 
-Jika ada kelas dengan jumlah data di bawah `TARGET_PER_CLASS` (lihat `config.py`), command ini akan gagal (exit code != 0).
+Jika ada kelas dengan jumlah data di bawah `TARGET_PER_CLASS` (lihat `src/config.py`), command ini akan gagal (exit code != 0).
 
 Opsional (holdout split saja):
 
 ```powershell
-& .\library\Scripts\python.exe .\evaluasi.py --test-size 0.2 --seed 42
+& .\library\Scripts\python.exe .\scripts\evaluasi.py --test-size 0.2 --seed 42
 ```
 
 ## Cara Membaca Output
@@ -83,7 +83,7 @@ Hasil berikut adalah output yang sudah dihasilkan di workspace ini.
 - Macro avg (Precision / Recall / F1): **0.9816 / 0.9766 / 0.9787**
 - Weighted (Precision / Recall / F1): **0.9786 / 0.9782 / 0.9783**
 
-> Output `evaluasi.py` juga mencetak confusion matrix (rows=true, cols=pred) untuk analisis kesalahan.
+> Output `scripts/evaluasi.py` juga mencetak confusion matrix (rows=true, cols=pred) untuk analisis kesalahan.
 
 ## Catatan Reproducibility (Versi Library)
 

@@ -1,5 +1,7 @@
 import os
 import pickle
+import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,11 +13,28 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
 
-from config import Config
+# Enable importing from project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.config import Config
 
 
 def _feature_columns(cfg: Config) -> list[str]:
     return [f"f{i + 1}" for i in range(cfg.NUM_FEATURES)]
+
+
+def _validate_feature_values(df: pd.DataFrame, fname: str) -> pd.DataFrame:
+    try:
+        numeric_df = df.astype(float)
+    except ValueError as e:
+        raise ValueError(f"{fname} berisi nilai fitur non-numeric: {e}") from e
+
+    values = numeric_df.to_numpy(dtype=float)
+    if not np.isfinite(values).all():
+        raise ValueError(f"{fname} berisi nilai NaN atau infinity.")
+    return numeric_df
 
 
 def load_dataset(cfg: Config) -> pd.DataFrame:
@@ -45,11 +64,12 @@ def load_dataset(cfg: Config) -> pd.DataFrame:
                     print(f"  Dilewati: Kolom tidak sesuai ({df.shape[1]} != {feature_size})")
                     continue
 
+                df = _validate_feature_values(df, fname)
                 label = fname.replace("data_", "").replace(".csv", "")
                 df.columns = columns
                 df["label"] = label
                 data_all.append(df)
-            except (OSError, pd.errors.ParserError, UnicodeDecodeError, ValueError) as e:
+            except (OSError, pd.errors.ParserError, UnicodeDecodeError) as e:
                 print(f"  Gagal membaca {fname}: {e}")
 
     if not data_all:
@@ -64,7 +84,7 @@ def train_model(cfg: Config):
     print(f"\nTotal sampel: {len(dataset)}")
 
     columns = _feature_columns(cfg)
-    X = dataset[columns].fillna(0).astype(float).values
+    X = dataset[columns].astype(float).values
 
     le = LabelEncoder()
     y = le.fit_transform(dataset["label"])

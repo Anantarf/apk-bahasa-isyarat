@@ -1,18 +1,28 @@
 import csv
 import os
+import string
+import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 import cv2
 import mediapipe as mp
 import numpy as np
 
-from config import Config
-from app_logging import get_logger
-from sibi_core import extract_keypoint_features, select_target_hand_index
+# Enable importing from project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.config import Config
+from src.app_logging import get_logger
+from src.sibi_core import extract_keypoint_features, select_target_hand_index
 
 logger = get_logger(__name__)
+
+VALID_LABELS = set(string.ascii_uppercase)
 
 @dataclass
 class CollectionContext:
@@ -72,6 +82,14 @@ def _validate_sequence_config(cfg: Config) -> int:
             f"NUM_FEATURES ({cfg.NUM_FEATURES}) harus kelipatan NUM_COORDINATES ({cfg.NUM_COORDINATES})"
         )
     return cfg.NUM_FEATURES // cfg.NUM_COORDINATES
+
+
+def normalize_label(label_data: str) -> str:
+    """Return a valid single-letter SIBI label."""
+    label = (label_data or "").strip().upper()
+    if label not in VALID_LABELS:
+        raise ValueError("Label harus satu huruf A-Z.")
+    return label
 
 
 def _create_camera_error_frame(width: int, height: int, read_fail_count: int) -> np.ndarray:
@@ -286,6 +304,7 @@ def _run_collection_loop(cap, hands, context: CollectionContext) -> None:
 
 def collect_data(label_data: str, cfg: Config) -> None:
     """Collect sequence data and append into data_[label].csv."""
+    label_data = normalize_label(label_data)
     mp_hands = mp.solutions.hands
     mp_drawing = mp.solutions.drawing_utils
     mp_styles = mp.solutions.drawing_styles
@@ -317,9 +336,10 @@ def collect_data(label_data: str, cfg: Config) -> None:
         cv2.destroyAllWindows()
 def main() -> None:
     cfg = Config()
-    label_data = input("Masukkan label gesture: ").strip().upper()
-    if not label_data:
-        logger.warning("Label kosong, batal.")
+    try:
+        label_data = normalize_label(input("Masukkan label gesture: "))
+    except ValueError as e:
+        logger.warning("%s", e)
         return
 
     collect_data(label_data, cfg)
@@ -327,18 +347,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

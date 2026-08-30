@@ -1,23 +1,24 @@
 """
 Unit tests for SIBI Sign Language Recognition Application
 
-Run with: pytest test_isyarat.py -v
+Run with: pytest tests/test_isyarat.py -v
 """
 
 import pytest
 import numpy as np
 import time
 from unittest.mock import Mock, patch, MagicMock
-from config import Config
-from making_data import extract_scaling
-from sibi_core import select_target_hand_index
-from isyarat import (
+from src.config import Config
+from scripts.making_data import extract_scaling, normalize_label
+from src.sibi_core import select_target_hand_index
+from src.isyarat import (
     HandKeypointProcessor,
     GestureDetector,
     PredictionManager,
     ModelManager,
     UIRenderer
 )
+from scripts.train import _validate_feature_values
 
 
 class TestConfig:
@@ -26,7 +27,7 @@ class TestConfig:
     def test_config_defaults(self):
         """Test default configuration values"""
         config = Config()
-        assert config.MODEL_PATH == './model/mymodel.sav'
+        assert 'mymodel.sav' in config.MODEL_PATH
         assert config.NUM_LANDMARKS == 21
         assert config.GESTURE_DURATION == 2.5
         assert config.DISPLAY_DURATION == 999999.0
@@ -241,6 +242,14 @@ class TestPredictionManager:
         assert committed == "A"
         assert manager.get_display_text() == "A"
 
+    def test_has_pending_prediction(self):
+        manager = PredictionManager(display_duration=3.0, prediction_delay=0.0, smoothing_window=3)
+
+        manager.add_sample("J")
+
+        assert manager.has_pending_prediction("J")
+        assert not manager.has_pending_prediction("Z")
+
 
 class TestModelManager:
     """Test model management"""
@@ -424,6 +433,28 @@ class TestIntegration:
         assert prediction_manager.get_display_text() == "AB"
 
 
+class TestDataCollectionValidation:
+    """Tests for collection input validation."""
+
+    def test_normalize_label_accepts_single_letter(self):
+        assert normalize_label(" a ") == "A"
+
+    @pytest.mark.parametrize("label", ["", "AA", "1", "TEST"])
+    def test_normalize_label_rejects_invalid_label(self, label):
+        with pytest.raises(ValueError, match="A-Z"):
+            normalize_label(label)
+
+
+class TestTrainingValidation:
+    """Tests for training data validation."""
+
+    def test_training_rejects_nan_features(self):
+        df = np.zeros((1, 210), dtype=float)
+        df[0, 3] = np.nan
+
+        with pytest.raises(ValueError, match="NaN atau infinity"):
+            _validate_feature_values(__import__("pandas").DataFrame(df), "data_A.csv")
+
 
 class TestSharedCore:
     """Tests for shared preprocessing and hand-selection helpers."""
@@ -461,13 +492,7 @@ class TestSharedCore:
 
         assert select_target_hand_index(results, config) == 1
 
+
 # Run tests
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
-
-
-
-
-
-
-

@@ -1,8 +1,12 @@
 """
 Configuration management for SIBI Sign Language Recognition Application
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 import cv2
+
+# Project root directory (parent of src)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 @dataclass
@@ -10,8 +14,8 @@ class Config:
     """Configuration constants for the application"""
     
     # File paths
-    MODEL_PATH: str = './model/mymodel.sav'  # Original model (BEST)
-    DATA_PATH: str = './data'
+    MODEL_PATH: str = field(default_factory=lambda: str(PROJECT_ROOT / 'model' / 'mymodel.sav'))
+    DATA_PATH: str = field(default_factory=lambda: str(PROJECT_ROOT / 'data'))
     
     # MediaPipe Hand detection parameters
     MODEL_COMPLEXITY: int = 0

@@ -13,8 +13,9 @@ import threading
 import tkinter as tk
 from typing import Optional
 from datetime import datetime
-from isyarat import SignLanguageRecognizer
-from app_logging import get_logger
+from src.config import Config
+from src.isyarat import SignLanguageRecognizer
+from src.app_logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -71,6 +72,7 @@ Tips for Best Results:
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
 
+        self.config = Config()
         self.camera_width, self.camera_height = self._detect_camera_resolution()
         self.window = ctk.CTk()
         self._setup_window()
@@ -123,13 +125,15 @@ Tips for Best Results:
         finally:
             cap.release()
     def _detect_camera_resolution(self) -> tuple:
-        """Detect camera native resolution with smart camera selection."""
-        detected_cameras = [cam for index in range(3) if (cam := self._probe_camera(index))]
+        """Detect camera resolution using Config.CAMERA_INDEX first."""
+        preferred_index = int(getattr(self.config, "CAMERA_INDEX", 0))
+        scan_order = [preferred_index] + [index for index in range(3) if index != preferred_index]
+        detected_cameras = [cam for index in scan_order if (cam := self._probe_camera(index))]
         if not detected_cameras:
-            self._camera_index = 0
+            self._camera_index = preferred_index
             return 640, 480
 
-        selected_cam = next((cam for cam in detected_cameras if cam["index"] == 1), detected_cameras[0])
+        selected_cam = detected_cameras[0]
         self._camera_index = selected_cam["index"]
         return selected_cam["width"], selected_cam["height"]
     def _setup_ui(self):
@@ -315,7 +319,7 @@ Tips for Best Results:
     def _init_recognizer_and_loop(self):
         """Initialize recognizer off the UI thread, then run video loop."""
         try:
-            self._recognizer = SignLanguageRecognizer()
+            self._recognizer = SignLanguageRecognizer(self.config)
             self.window.after(0, self._enable_controls)
         except (RuntimeError, OSError, ValueError) as e:
             self.window.after(0, self._show_init_error, str(e))
@@ -334,18 +338,21 @@ Tips for Best Results:
 
         self._is_running = False
         self._fade_canvas()
-        self._wait_for_video_thread()
+        self._finish_stop_when_thread_exited()
+
+    def _finish_stop_when_thread_exited(self):
+        """Finish cleanup after the video thread has actually exited."""
+        if self._video_thread and self._video_thread.is_alive():
+            self._video_thread.join(timeout=0.2)
+            if self._video_thread.is_alive():
+                logger.warning("Waiting for video thread to stop")
+                self.window.after(200, self._finish_stop_when_thread_exited)
+                return
+
         self._cleanup_recognizer()
+        self._video_thread = None
         self._log_session_summary()
         self._reset_idle_canvas()
-
-    def _wait_for_video_thread(self):
-        """Wait briefly for the video thread to exit."""
-        if not self._video_thread or not self._video_thread.is_alive():
-            return
-        self._video_thread.join(timeout=2.0)
-        if self._video_thread.is_alive():
-            logger.warning("Video thread did not stop gracefully")
     def _reset_text(self):
         """Reset accumulated text (R key or button)."""
         if not self._is_running or not self._recognizer:
@@ -523,13 +530,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-

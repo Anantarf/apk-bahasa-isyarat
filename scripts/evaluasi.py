@@ -7,9 +7,9 @@ Fitur utama:
 4) Optional stratified cross-validation.
 
 Run examples:
-  & .\library\Scripts\python.exe .\evaluasi.py --validate-only
-  & .\library\Scripts\python.exe .\evaluasi.py --test-size 0.2 --seed 42
-  & .\library\Scripts\python.exe .\evaluasi.py --cv 5 --seed 42
+  & .\library\Scripts\python.exe .\scripts\evaluasi.py --validate-only
+  & .\library\Scripts\python.exe .\scripts\evaluasi.py --test-size 0.2 --seed 42
+  & .\library\Scripts\python.exe .\scripts\evaluasi.py --cv 5 --seed 42
 """
 
 from __future__ import annotations
@@ -17,9 +17,10 @@ from __future__ import annotations
 import argparse
 import os
 import pickle
+import sys
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
 from pathlib import Path
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -31,7 +32,12 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import StratifiedKFold, cross_val_predict, train_test_split
 
-from config import Config
+# Enable importing from project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.config import Config
 
 
 @dataclass(frozen=True)
@@ -224,8 +230,6 @@ def summarize_scores(y_true: np.ndarray, y_pred: np.ndarray, labels_sorted: List
     return "\n".join(lines)
 
 
-
-
 def summarize_dataset_quality(dataset: Dataset, config: Config) -> str:
     """Build a practical dataset-quality report with data collection priorities."""
     target = int(config.TARGET_PER_CLASS)
@@ -285,6 +289,8 @@ def save_report(path: str, sections: List[str]) -> None:
     report_path = Path(path)
     report_path.write_text("\n\n".join(sections).rstrip() + "\n", encoding="utf-8")
     print(f"Report saved: {report_path}")
+
+
 def evaluate_in_sample(model, dataset: Dataset) -> str:
     y_pred_raw = model.predict(dataset.X)
     y_pred = coerce_pred_to_str_labels(y_pred_raw, dataset.labels_sorted)
@@ -364,6 +370,7 @@ def evaluate_crossval(model, dataset: Dataset, cv: int, seed: int) -> str:
     print("")
     return section
 
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--test-size", type=float, default=0.2)
@@ -434,11 +441,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-
-
-
-
-
-

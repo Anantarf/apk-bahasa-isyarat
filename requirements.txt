@@ -3,6 +3,7 @@ altgraph==0.17.4
 attrs==23.2.0
 cffi==1.16.0
 contourpy==1.2.1
+customtkinter==5.2.2
 cycler==0.12.1
 flatbuffers==24.3.25
 fonttools==4.53.1
