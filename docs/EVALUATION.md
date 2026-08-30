@@ -14,13 +14,13 @@ Dokumen ini menjelaskan cara menjalankan evaluasi dan cara membaca output dari `
 Gunakan python dari venv project:
 
 ```powershell
-& .\library\Scripts\python.exe .\scripts\evaluasi.py --cv 5 --seed 42 --no-in-sample
+python scripts/evaluasi.py --cv 5 --seed 42 --no-in-sample
 ```
 
 Quality gate sebelum retrain (strict):
 
 ```powershell
-& .\library\Scripts\python.exe .\scripts\evaluasi.py --validate-only --strict
+python scripts/evaluasi.py --validate-only --strict
 ```
 
 Jika ada kelas dengan jumlah data di bawah `TARGET_PER_CLASS` (lihat `src/config.py`), command ini akan gagal (exit code != 0).
@@ -28,7 +28,7 @@ Jika ada kelas dengan jumlah data di bawah `TARGET_PER_CLASS` (lihat `src/config
 Opsional (holdout split saja):
 
 ```powershell
-& .\library\Scripts\python.exe .\scripts\evaluasi.py --test-size 0.2 --seed 42
+python scripts/evaluasi.py --test-size 0.2 --seed 42
 ```
 
 ## Cara Membaca Output

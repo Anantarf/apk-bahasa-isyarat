@@ -7,9 +7,9 @@ Fitur utama:
 4) Optional stratified cross-validation.
 
 Run examples:
-  & .\library\Scripts\python.exe .\scripts\evaluasi.py --validate-only
-  & .\library\Scripts\python.exe .\scripts\evaluasi.py --test-size 0.2 --seed 42
-  & .\library\Scripts\python.exe .\scripts\evaluasi.py --cv 5 --seed 42
+  python scripts/evaluasi.py --validate-only
+  python scripts/evaluasi.py --test-size 0.2 --seed 42
+  python scripts/evaluasi.py --cv 5 --seed 42
 """
 
 from __future__ import annotations
