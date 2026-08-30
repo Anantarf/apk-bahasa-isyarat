@@ -204,8 +204,8 @@ class PredictionManager:
         self.last_display_time: Optional[float] = None
         self.last_sample_time: Optional[float] = None
         self.display_text: str = ""
-        self.smoothing_window = max(1, int(smoothing_window))
-        self.raw_prediction_interval = max(0.0, float(raw_prediction_interval))
+        self.smoothing_window = max(1, smoothing_window)
+        self.raw_prediction_interval = max(0.0, raw_prediction_interval)
         self._pending_predictions: Deque[str] = deque(maxlen=self.smoothing_window)
     
     def can_predict(self) -> bool:
@@ -229,17 +229,17 @@ class PredictionManager:
     
     def add_prediction(self, prediction: str):
         """
-        Add new prediction to display text.
+        Add new prediction to display text using FIFO rolling window when full.
         
         Args:
             prediction: Predicted character/label
         """
         now = time.time()
         if len(self.display_text) >= self.max_text_length:
-            # Buffer full - update timing but don't add character
-            self.last_prediction_time = now
-            return
-        self.display_text += prediction
+            # FIFO Rolling Window: drop oldest character and append new prediction
+            self.display_text = self.display_text[1:] + prediction
+        else:
+            self.display_text += prediction
         self.last_prediction_time = now
         self.last_display_time = now
 
@@ -440,7 +440,7 @@ class UIRenderer:
         self.mp_drawing.draw_landmarks(
             image,
             hand_landmarks,
-            self.mp_hands.HAND_CONNECTIONS,
+            list(self.mp_hands.HAND_CONNECTIONS),
             self.mp_drawing_styles.get_default_hand_landmarks_style(),
             self.mp_drawing_styles.get_default_hand_connections_style()
         )
@@ -528,7 +528,7 @@ class SignLanguageRecognizer:
             min_detection_confidence=self.config.MIN_DETECTION_CONFIDENCE,
             min_tracking_confidence=self.config.MIN_TRACKING_CONFIDENCE,
         )
-    def __init__(self, config: Config = None):
+    def __init__(self, config: Optional[Config] = None):
         """Initialize the sign language recognizer."""
         self.config = config or Config()
         self.model_manager = ModelManager(self.config)
@@ -579,7 +579,7 @@ class SignLanguageRecognizer:
             except (TypeError, ValueError):
                 return 0.0
 
-        flipped = landmark_pb2.NormalizedLandmarkList()
+        flipped = landmark_pb2.NormalizedLandmarkList()  # type: ignore[attr-defined]
         for lm in hand_landmarks.landmark:
             x = _as_float(getattr(lm, "x", 0.0))
             y = _as_float(getattr(lm, "y", 0.0))
@@ -589,7 +589,7 @@ class SignLanguageRecognizer:
             y = max(0.0, min(1.0, y))
 
             flipped.landmark.append(
-                landmark_pb2.NormalizedLandmark(
+                landmark_pb2.NormalizedLandmark(  # type: ignore[attr-defined]
                     x=x,
                     y=y,
                     z=z,
@@ -762,11 +762,19 @@ class SignLanguageRecognizer:
         if hasattr(self, 'hands'):
             self.hands.close()
     
+    def _camera_scan_order(self) -> list[int]:
+        preferred_index = int(getattr(self.config, "CAMERA_INDEX", 0))
+        allowed_indices = tuple(getattr(self.config, "CAMERA_SCAN_INDICES", (preferred_index,)))
+        return [preferred_index] + [index for index in allowed_indices if index != preferred_index]
+
     def _open_camera(self):
-        cap = cv2.VideoCapture(self.config.CAMERA_INDEX)
-        if not cap.isOpened():
-            raise RuntimeError("Failed to open camera")
-        return cap
+        for index in self._camera_scan_order():
+            cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            if cap.isOpened():
+                logger.info("Camera opened at index %s", index)
+                return cap
+            cap.release()
+        raise RuntimeError(f"Failed to open camera. Tried indices: {self._camera_scan_order()}")
 
     def _process_camera_frame(self, cap) -> bool:
         success, image = cap.read()

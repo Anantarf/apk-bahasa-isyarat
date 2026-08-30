@@ -47,9 +47,10 @@ class Config:
     
     # UI parameters
     WINDOW_NAME: str = 'Aplikasi Bahasa Isyarat (SIBI)'
-    CAMERA_INDEX: int = 0
+    CAMERA_INDEX: int = 2
+    CAMERA_SCAN_INDICES: tuple[int, ...] = (2, 0, 1, 3)
     CAMERA_FLIP_HORIZONTAL: bool = True
-    RIGHT_HAND_ONLY: bool = True
+    RIGHT_HAND_ONLY: bool = False
     # MediaPipe handedness label to use when RIGHT_HAND_ONLY=True.
     # If your physical right hand is detected as "Left", set this to "Left".
     TARGET_HAND_LABEL: str = "Left"

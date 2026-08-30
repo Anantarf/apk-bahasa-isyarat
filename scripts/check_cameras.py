@@ -1,9 +1,15 @@
+import sys
+from pathlib import Path
+
 import cv2
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from src.config import Config
+
 print("Detecting all available cameras...\n")
 
-for i in range(3):
+for i in Config().CAMERA_SCAN_INDICES:
     print(f"Testing Camera Index {i}:")
     cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
     

@@ -31,6 +31,7 @@ class TestConfig:
         assert config.NUM_LANDMARKS == 21
         assert config.GESTURE_DURATION == 2.5
         assert config.DISPLAY_DURATION == 999999.0
+        assert config.CAMERA_SCAN_INDICES == (2, 0, 1, 3)
     
     def test_config_validation(self):
         """Test configuration validation"""
