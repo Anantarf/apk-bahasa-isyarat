@@ -10,6 +10,24 @@ tmp_ret = collect_all('mediapipe')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('pygrabber')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+hiddenimports += [
+    'joblib',
+    'sklearn',
+    'sklearn.base',
+    'sklearn.svm',
+    'sklearn.svm._classes',
+    'sklearn.svm._libsvm',
+    'sklearn.svm._liblinear',
+    'sklearn.preprocessing',
+    'sklearn.preprocessing._label',
+    'sklearn.utils._typedefs',
+    'sklearn.utils._heap',
+    'sklearn.utils._sorting',
+    'sklearn.utils._vector_sentinel',
+    'scipy',
+    'scipy.sparse',
+    'numpy',
+]
 
 
 a = Analysis(
