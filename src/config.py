@@ -47,7 +47,7 @@ class Config:
     
     # UI parameters
     WINDOW_NAME: str = 'Aplikasi Bahasa Isyarat (SIBI)'
-    CAMERA_INDEX: int = 2
+    CAMERA_INDEX: int = 0
     CAMERA_SCAN_INDICES: tuple[int, ...] = (2, 0, 1, 3)
     CAMERA_FLIP_HORIZONTAL: bool = True
     RIGHT_HAND_ONLY: bool = False
