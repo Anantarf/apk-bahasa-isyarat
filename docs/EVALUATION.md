@@ -1,95 +1,128 @@
-# Evaluasi Model (Precision, Recall, F1)
+# Evaluasi Model SIBI
 
-Dokumen ini menjelaskan cara menjalankan evaluasi dan cara membaca output dari `scripts/evaluasi.py`.
+Dokumen ini merangkum cara evaluasi dataset dan model klasifikasi alfabet SIBI A-Z pada project ini.
 
-## Yang Dievaluasi
+## Lingkup Evaluasi
 
-- Yang dievaluasi adalah **model klasifikasi SVM** (file: `model/mymodel.sav`) terhadap **dataset fitur** di `data/data_*.csv`.
-- Dataset ini berisi **fitur numerik** (210 angka per sampel). Jadi evaluasi ini mengukur performa **model SVM pada fitur statis**.
+Evaluasi dilakukan terhadap:
 
-> Catatan: fitur runtime aplikasi (mis. smoothing vote, progress/hold timing, dan deteksi motion J/Z) adalah layer real-time yang bekerja di webcam dan **tidak termasuk** evaluasi dataset statis ini.
+- Dataset fitur landmark di `data/data_*.csv`.
+- Model SVM aktif di `model/mymodel.sav`.
+- Label encoder aktif di `model/le.sav`.
 
-## Cara Menjalankan
+Setiap sampel berisi 210 fitur numerik, yaitu sequence 5 frame x 42 koordinat landmark tangan. Evaluasi ini mengukur performa model pada dataset fitur statis. Flow real-time seperti smoothing, hold timing, camera fallback, dan deteksi gerak `J/Z` tetap perlu diuji manual melalui kamera.
 
-Gunakan python dari venv project:
+## Command Evaluasi
 
-```powershell
-python scripts/evaluasi.py --cv 5 --seed 42 --no-in-sample
-```
-
-Quality gate sebelum retrain (strict):
+Validasi dataset minimal 300 sampel per kelas:
 
 ```powershell
-python scripts/evaluasi.py --validate-only --strict
+python .\scripts\evaluasi.py --validate-only --strict
 ```
 
-Jika ada kelas dengan jumlah data di bawah `TARGET_PER_CLASS` (lihat `src/config.py`), command ini akan gagal (exit code != 0).
-
-Opsional (holdout split saja):
+Evaluasi holdout stratified split:
 
 ```powershell
-python scripts/evaluasi.py --test-size 0.2 --seed 42
+python .\scripts\evaluasi.py --test-size 0.2 --seed 42 --no-in-sample
 ```
 
-## Cara Membaca Output
+Evaluasi cross-validation 5-fold:
 
-### 1) Dataset summary
+```powershell
+python .\scripts\evaluasi.py --cv 5 --seed 42 --no-in-sample
+```
 
-Bagian ini menampilkan:
+## Status Dataset Terbaru
 
-- Total sampel
-- Jumlah fitur per sampel (seharusnya 210)
-- Jumlah kelas (A–Z)
-- **Support per kelas** = jumlah data pada kelas tersebut
+Target minimal per kelas: 300 sampel.
 
-Jika support timpang (kelas tertentu jauh lebih banyak), maka metrik agregat perlu dibaca dengan hati-hati.
+```text
+A: 875   B: 1182  C: 1635  D: 655   E: 634   F: 775
+G: 366   H: 345   I: 367   J: 321   K: 385   L: 446
+M: 391   N: 328   O: 330   P: 338   Q: 336   R: 341
+S: 331   T: 335   U: 343   V: 349   W: 343   X: 328
+Y: 326   Z: 324
+```
 
-### 2) Precision, Recall, F1 (per kelas)
+Semua kelas sudah mencapai target minimal. Imbalance ratio terbaru turun menjadi 5.09x dari kondisi sebelumnya yang jauh lebih timpang.
 
-Untuk suatu kelas (mis. huruf `J`):
+## Hasil Holdout Terbaru
 
-- **Precision(J)**: dari semua prediksi yang diklaim sebagai `J`, berapa yang benar `J`.
-- **Recall(J)**: dari semua data yang benar-benar `J`, berapa yang berhasil terdeteksi sebagai `J`.
-- **F1(J)**: ringkasan Precision dan Recall (harmonic mean).
+Command:
 
-### 3) Macro vs Weighted
+```powershell
+python .\scripts\evaluasi.py --test-size 0.2 --seed 42 --no-in-sample
+```
 
-Karena dataset **tidak seimbang**, dua angka ini penting:
+Hasil:
 
-- **Macro avg (F1)**: rata-rata F1 semua kelas dengan bobot sama.
-  - Cocok untuk menilai performa “adil” untuk setiap huruf.
-- **Weighted (F1)**: rata-rata F1 dengan bobot sesuai jumlah data per kelas.
-  - Akan lebih dipengaruhi kelas yang datanya banyak.
+```text
+Accuracy: 0.9855
+Macro avg  (Precision / Recall / F1): 0.9920 / 0.9915 / 0.9917
+Weighted   (Precision / Recall / F1): 0.9857 / 0.9855 / 0.9855
+```
 
-Rekomendasi untuk penulisan ilmiah:
+Confusion terbesar:
 
-- Utamakan **Macro-F1** sebagai metrik utama untuk dataset tidak seimbang.
-- Sertakan **Weighted-F1** sebagai pelengkap.
-- Sertakan juga tabel per kelas (Precision/Recall/F1/Support) dan confusion matrix.
+```text
+C -> B : 19
+B -> C : 9
+W -> V : 2
+V -> L : 1
+T -> M : 1
+T -> C : 1
+S -> V : 1
+M -> G : 1
+M -> A : 1
+L -> Y : 1
+```
 
-## Hasil Evaluasi (Seed=42)
+## Hasil Training Terbaru
 
-Hasil berikut adalah output yang sudah dihasilkan di workspace ini.
+Output `scripts/train.py` setelah dataset diperbarui menunjukkan:
 
-### A) Holdout (Stratified split, test_size=0.2)
+```text
+Accuracy: 0.9904405652535329
+```
 
-- Accuracy: **0.9803**
-- Macro avg (Precision / Recall / F1): **0.9884 / 0.9853 / 0.9860**
-- Weighted (Precision / Recall / F1): **0.9810 / 0.9803 / 0.9803**
+Huruf dengan akurasi per kelas terendah pada output training:
 
-### B) Cross-validation 5-Fold (StratifiedKFold, cv=5)
+```text
+B: 94.9%
+C: 95.5%
+L: 98.9%
+R: 98.5%
+X: 98.5%
+```
 
-- Accuracy: **0.9782**
-- Macro avg (Precision / Recall / F1): **0.9816 / 0.9766 / 0.9787**
-- Weighted (Precision / Recall / F1): **0.9786 / 0.9782 / 0.9783**
+Artinya, peningkatan berikutnya sebaiknya tetap difokuskan pada pasangan huruf yang mudah tertukar, terutama `B` dan `C`.
 
-> Output `scripts/evaluasi.py` juga mencetak confusion matrix (rows=true, cols=pred) untuk analisis kesalahan.
+## Cara Membaca Metrik
 
-## Catatan Reproducibility (Versi Library)
+- Precision: dari semua prediksi suatu huruf, berapa yang benar.
+- Recall: dari semua data asli suatu huruf, berapa yang berhasil dikenali.
+- F1-score: ringkasan precision dan recall.
+- Macro average: rata-rata semua kelas dengan bobot sama.
+- Weighted average: rata-rata dengan bobot mengikuti jumlah sampel per kelas.
 
-Model `mymodel.sav` dibuat dengan scikit-learn versi lama. Untuk kerapihan ilmiah dan konsistensi, environment project ini dipin:
+Karena dataset tidak sepenuhnya seimbang, Macro-F1 perlu dilaporkan bersama accuracy.
 
-- `scikit-learn==1.3.2`
-- `numpy==1.26.4` (kompatibel dengan scikit-learn 1.3.2)
+## Rekomendasi Lanjutan
 
-Versi ini memastikan load model tidak memunculkan warning mismatch.
+- Tambah data variasi untuk `B` dan `C`.
+- Rekam ulang sampel yang blur, terlalu miring, atau gesture-nya tidak konsisten.
+- Uji real-time dengan kamera laptop dan USB camera.
+- Setelah model diperbarui, rebuild EXE agar model baru ikut masuk ke bundle.
+
+## Catatan Reproducibility
+
+Dependency utama yang dipakai:
+
+```text
+Python 3.11.x
+scikit-learn==1.3.2
+numpy==1.26.4
+mediapipe==0.10.14
+opencv-python==4.10.0.84
+PyInstaller==6.9.0
+```
