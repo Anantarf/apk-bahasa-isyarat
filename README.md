@@ -1,3 +1,4 @@
+
 # SIBI Sign Language Recognition
 
 Aplikasi desktop untuk mengenali gestur alfabet Bahasa Isyarat Indonesia (SIBI) A-Z menggunakan MediaPipe Hands dan model klasifikasi SVM. Project ini dibuat untuk kebutuhan Penulisan Ilmiah dengan alur lengkap: pengambilan dataset, training model, evaluasi, GUI real-time, dan packaging executable Windows.
