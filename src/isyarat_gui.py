@@ -119,6 +119,7 @@ Tips Hasil Terbaik:
         self._last_logged_text = ""
         self._detection_count = 0
         self._is_closing = False
+        self._pending_camera_restart = False
 
     def _probe_camera(self, index: int) -> Optional[dict]:
         """Return camera info when an index opens and captures a frame."""
@@ -213,8 +214,8 @@ Tips Hasil Terbaik:
                 logger.info("Switching camera to index %s (%s)", new_index, selected_option)
                 self._camera_index = new_index
                 if self._is_running:
+                    self._pending_camera_restart = True
                     self._stop_recognition()
-                    self.window.after(300, self._start_recognition)
         except ValueError:
             pass
 
@@ -625,6 +626,7 @@ Tips Hasil Terbaik:
         self._last_logged_text = ""
         self._detection_count = 0
         self._is_closing = False
+        self._pending_camera_restart = False
         logger.info("%s", "=" * 60)
         logger.info("DETECTION SESSION STARTED")
         logger.info("%s", "=" * 60)
@@ -729,6 +731,10 @@ Tips Hasil Terbaik:
         self._cleanup_recognizer()
         self._video_thread = None
         self._log_session_summary()
+        if self._pending_camera_restart and not self._is_closing:
+            self._pending_camera_restart = False
+            self.window.after(100, self._start_recognition)
+            return
         self._reset_idle_canvas()
 
     def _reset_text(self):
@@ -755,10 +761,34 @@ Tips Hasil Terbaik:
         self._schedule_ui(self._update_frame, processed_frame)
         return True
 
+    def _camera_open_order(self) -> list[int]:
+        """Return selected camera first, then detected/scan fallback indices."""
+        ordered = [self._camera_index]
+        ordered.extend(index for index, _ in getattr(self, "detected_cameras", []) if index not in ordered)
+        ordered.extend(index for index in getattr(self.config, "CAMERA_SCAN_INDICES", ()) if index not in ordered)
+        return ordered
+
+    def _open_video_capture(self):
+        """Open the selected camera, falling back to other known camera indices."""
+        tried = []
+        for index in self._camera_open_order():
+            tried.append(index)
+            cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    if index != self._camera_index:
+                        logger.info("Selected camera failed; using fallback index %s", index)
+                        self._camera_index = index
+                    return cap
+            cap.release()
+        logger.error("Failed to open camera. Tried indices: %s", tried)
+        return None
+
     def _video_loop(self):
         """Main video processing loop (runs in separate thread)."""
-        cap = cv2.VideoCapture(self._camera_index, cv2.CAP_DSHOW)
-        if not cap.isOpened():
+        cap = self._open_video_capture()
+        if cap is None:
             self._schedule_ui(self._show_camera_error)
             return
 
@@ -836,6 +866,7 @@ Tips Hasil Terbaik:
             return
         self._is_closing = True
         self._is_running = False
+        self._pending_camera_restart = False
         self.start_btn.configure(state="disabled")
         self.reset_btn.configure(state="disabled")
         self.exit_btn.configure(state="disabled")
